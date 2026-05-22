@@ -71,39 +71,34 @@ Navigate to:
 http://move.local:808
 ```
 
-## Auto-start with systemd (Optional)
+## Auto-start on Boot (Optional)
 
-To have the app start automatically when Move boots:
+Move uses SysV init (not systemd). The init script must be installed as `root`, which requires SSH access to `root@move.local` — the same SSH key used for `ableton` works.
+
+Run these commands from your Mac:
 
 ```bash
-# On Move
-sudo tee /etc/systemd/system/move-overview.service > /dev/null << 'EOF'
-[Unit]
-Description=MOVE Overview
-After=network.target
+# Copy the init script as root
+scp move-overview-init root@move.local:/etc/init.d/move-overview
 
-[Service]
-Type=simple
-User=ableton
-WorkingDirectory=/data/UserData/move-overview-poc
-Environment="PATH=/data/UserData/move-overview-poc/venv/bin"
-ExecStart=/data/UserData/move-overview-poc/venv/bin/python app.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable move-overview
-sudo systemctl start move-overview
+# Enable and start it
+ssh root@move.local "chmod +x /etc/init.d/move-overview && update-rc.d move-overview defaults && /etc/init.d/move-overview start"
 ```
 
-Check status:
+Verify it's running:
 ```bash
-sudo systemctl status move-overview
-sudo journalctl -u move-overview -f
+ssh ableton@move.local "ps aux | grep app.py | grep -v grep"
+```
+
+To stop or restart manually:
+```bash
+ssh root@move.local "/etc/init.d/move-overview stop"
+ssh root@move.local "/etc/init.d/move-overview start"
+```
+
+Logs are written to `/data/UserData/move-overview-poc/app.log`:
+```bash
+ssh ableton@move.local "tail -f /data/UserData/move-overview-poc/app.log"
 ```
 
 ## Updating

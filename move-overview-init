@@ -1,0 +1,14 @@
+#!/bin/sh
+
+service_path=/data/UserData/move-overview-poc/venv/bin/python
+service_args=/data/UserData/move-overview-poc/app.py
+service_name=move-overview
+logfile=/data/UserData/move-overview-poc/app.log
+
+if [ "$1" = "start" ]; then
+    start-stop-daemon --start -c ableton -b \
+        --make-pidfile --pidfile /var/run/$service_name.pid \
+        --exec $service_path -- $service_args >> $logfile 2>&1
+elif [ "$1" = "stop" ]; then
+    start-stop-daemon --stop --pidfile /var/run/$service_name.pid
+fi
