@@ -115,7 +115,7 @@ When you change files locally, push them to Move with `scp`:
 scp templates/index.html ableton@move.local:/data/UserData/move-overview-poc/templates/
 
 # Python files (restart required)
-scp app.py services/move_connection.py ableton@move.local:/data/UserData/move-overview-poc/
+scp app.py ableton@move.local:/data/UserData/move-overview-poc/
 scp services/move_connection.py ableton@move.local:/data/UserData/move-overview-poc/services/
 ```
 
