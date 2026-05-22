@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MOVE Overview POC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: monospace; 
+            background: #0a0a0a; 
+            color: #e0e0e0; 
+            padding: 20px;
+            font-size: 16px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #4dd9d9; margin-bottom: 20px; }
+        .disk-bar { 
+            background: #1a1a1a; 
+            border: 1px solid #333; 
+            padding: 15px; 
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .disk-fill { 
+            height: 20px; 
+            background: #4dd9d9; 
+            margin-top: 10px;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        .sets-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 14px;
+        }
+        .sets-table th, .sets-table td { 
+            padding: 8px; 
+            text-align: left; 
+            border-bottom: 1px solid #333; 
+        }
+        .sets-table th { color: #888; }
+        .pad-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+        .pad-cell {
+            aspect-ratio: 3/2;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            border-radius: 2px;
+            white-space: pre-line;
+            text-align: center;
+            padding: 4px;
+        }
+        @keyframes pulse-active {
+            0%   { box-shadow: 0 0 4px rgba(255,186,115,0.5); }
+            50%  { box-shadow: 0 0 14px rgba(255,186,115,0.9); }
+            100% { box-shadow: 0 0 4px rgba(255,186,115,0.5); }
+        }
+        .pad-cell.active { border-color: #ffba73 !important; background: rgba(255,186,115,0.3) !important; animation: pulse-active 1.5s ease-in-out infinite; }
+        .pad-cell.empty { opacity: 0.2; }
+        .filters { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #888;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 14px;
+            border-radius: 2px;
+        }
+        .filter-btn:hover { border-color: #4dd9d9; color: #4dd9d9; }
+        .filter-btn.active { background: rgba(77,217,217,0.1); border-color: #4dd9d9; color: #4dd9d9; }
+        .loading { color: #888; }
+        .error { color: #f7238d; }
+        .refresh-info { color: #666; font-size: 11px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MOVE Overview POC</h1>
+        
+        <div id="loading" class="loading">Loading...</div>
+        <div id="error" class="error"></div>
+        
+        <div id="content" style="display:none;">
+            <div class="disk-bar">
+                <div>STORAGE: <span id="disk-text"></span></div>
+                <div class="disk-fill" id="disk-fill"></div>
+            </div>
+            
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterByCamelot(null)">All Keys</button>
+                <button class="filter-btn" onclick="filterByCamelot('1A')">1A</button>
+                <button class="filter-btn" onclick="filterByCamelot('8A')">8A</button>
+                <button class="filter-btn" onclick="filterByCamelot('8B')">8B</button>
+            </div>
+            
+            <div class="pad-grid" id="pad-grid"></div>
+            
+            <table class="sets-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>BPM</th>
+                        <th>Key</th>
+                        <th>Mode</th>
+                        <th>Camelot</th>
+                        <th>Pad</th>
+                    </tr>
+                </thead>
+                <tbody id="sets-body"></tbody>
+            </table>
+            
+            <div class="refresh-info">Auto-refreshes every 30 seconds</div>
+        </div>
+    </div>
+
+    <script>
+        const MOVE_COLORS = [
+            null,
+            '#FF1917','#FF8E0C','#FF6229','#FFBA73','#D74A09',
+            '#E7E77F','#FFE95E','#C0FF70','#87FF6D','#5DDB20',
+            '#A1CE2F','#6AEDC4','#00CEC5','#00D4C6','#1DF7F3',
+            '#71A7E7','#2285F0','#7D57E5','#22ABF0','#968BE9',
+            '#B28BE9','#DF8BE9','#C75AD6','#F7238D','#E35FC8',
+        ];
+
+        let allData = null;
+        let currentFilter = null;
+
+        async function loadData() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                
+                if (data.error) {
+                    document.getElementById('error').textContent = 'Error: ' + data.error;
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                
+                allData = data;
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                
+                renderDisk(data.disk);
+                renderPadGrid(data.sets, data.current_slot);
+                renderSets(data.sets);
+            } catch (e) {
+                document.getElementById('error').textContent = 'Error: ' + e.message;
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function renderDisk(disk) {
+            if (!disk) return;
+            const pct = disk.percent_used;
+            document.getElementById('disk-text').textContent = 
+                `${disk.used_gb} GB / ${disk.total_gb} GB — ${pct}%`;
+            document.getElementById('disk-fill').style.width = pct + '%';
+            document.getElementById('disk-fill').style.background = 
+                pct > 80 ? '#f7238d' : pct > 50 ? '#ffba73' : '#4dd9d9';
+        }
+
+        function renderPadGrid(sets, currentSlot) {
+            const grid = document.getElementById('pad-grid');
+            grid.innerHTML = '';
+            
+            const slotMap = {};
+            sets.forEach(s => {
+                if (s.slot != null) slotMap[s.slot] = s;
+            });
+            
+            // Render 32 pads (4 rows x 8 cols)
+            for (let row = 3; row >= 0; row--) {
+                for (let col = 0; col < 8; col++) {
+                    const slot = row * 8 + col;
+                    const set = slotMap[slot];
+                    const cell = document.createElement('div');
+                    cell.className = 'pad-cell';
+                    // Use == (not ===) to handle string/int mismatch from JSON
+                    const isActive = currentSlot != null && currentSlot == slot;
+                    
+                    if (set) {
+                        const colorIdx = set.xattr_color || 4;
+                        const hex = MOVE_COLORS[colorIdx];
+                        if (hex) {
+                            cell.style.borderColor = isActive ? '#ffba73' : hex + '80';
+                            cell.style.background  = isActive ? hex + '40' : hex + '18';
+                        }
+                        if (isActive) cell.classList.add('active');
+                        const name = document.createElement('span');
+                        name.style.cssText = 'font-size:12px;font-weight:bold;word-break:break-word;text-align:center;';
+                        name.textContent = set.name;
+                        const bpm = document.createElement('span');
+                        bpm.style.cssText = 'font-size:11px;opacity:0.7;margin-top:2px;';
+                        bpm.textContent = set.bpm ? Math.round(set.bpm) + ' BPM' : '';
+                        cell.appendChild(name);
+                        cell.appendChild(bpm);
+                    } else {
+                        cell.classList.add('empty');
+                        cell.textContent = slot + 1;
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function renderSets(sets) {
+            const body = document.getElementById('sets-body');
+            body.innerHTML = '';
+            
+            let filtered = sets;
+            if (currentFilter) {
+                filtered = sets.filter(s => s.camelot === currentFilter);
+            }
+            
+            filtered.forEach(s => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="display:flex;align-items:center;gap:6px;">
+                        <span style="width:8px;height:8px;border-radius:2px;flex-shrink:0;background:${MOVE_COLORS[s.xattr_color||4]||'#333'};display:inline-block;"></span>
+                        ${s.name}
+                    </td>
+                    <td>${s.bpm ? Math.round(s.bpm) : '—'}</td>
+                    <td>${s.key || '—'}</td>
+                    <td>${s.mode || '—'}</td>
+                    <td>${s.camelot || '—'}</td>
+                    <td>${s.slot != null ? s.slot + 1 : '—'}</td>
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        function filterByCamelot(code) {
+            currentFilter = code;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            if (allData) renderSets(allData.sets);
+        }
+
+        // Fast poll: update only the active pad every 2 seconds
+        async function pollActiveSlot() {
+            try {
+                const res = await fetch('/api/active-slot');
+                const data = await res.json();
+                if (data.current_slot != null && allData) {
+                    allData.current_slot = data.current_slot;
+                    renderPadGrid(allData.sets, data.current_slot);
+                }
+            } catch (e) {}
+        }
+
+        // Load data on page load
+        loadData();
+
+        // Slow poll: full data refresh every 30 seconds
+        setInterval(loadData, 30000);
+
+        // Fast poll: active slot only every 2 seconds
+        setInterval(pollActiveSlot, 2000);
+    </script>
+</body>
+</html>
