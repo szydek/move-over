@@ -1,6 +1,6 @@
-# MOVE Overview POC
+# MOVE OverView
 
-A minimal web dashboard for [Ableton Move](https://www.ableton.com/en/move/) that runs **directly on the device** — no laptop required after deployment.
+A web dashboard for [Ableton Move](https://www.ableton.com/en/move/) that runs **directly on the device** — a second screen for your Move, accessible from any browser on the same WiFi network.
 
 Built as a proof of concept for integrating Move set management into [Schwung](https://github.com/charlesvestal/schwung). Runs as a standalone Flask app on port 808 alongside Schwung (port 7700).
 
@@ -12,6 +12,7 @@ Built as a proof of concept for integrating Move set management into [Schwung](h
 - **Sets table** — sortable list with BPM, key, mode, and Camelot code
 - **Key filtering** — filter sets by Camelot key
 - **Move color palette** — pad colors match what you see on the hardware
+- **System monitor** — CPU load and memory usage, updates every 5 seconds
 
 ## Prerequisites
 
