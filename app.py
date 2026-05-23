@@ -6,6 +6,7 @@ Usage:
 """
 import sys
 from flask import Flask, render_template, jsonify
+import os
 
 import services.move_connection as mc
 from services.bundle_parser import parse_bundle
@@ -91,6 +92,44 @@ def get_sets_data():
 def index():
     """Render the main page."""
     return render_template('index.html')
+
+def get_system_stats():
+    """Read CPU and memory stats from /proc."""
+    stats = {}
+    try:
+        with open('/proc/loadavg') as f:
+            parts = f.read().split()
+        stats['load_1']  = float(parts[0])
+        stats['load_5']  = float(parts[1])
+        stats['load_15'] = float(parts[2])
+    except Exception:
+        pass
+    try:
+        meminfo = {}
+        with open('/proc/meminfo') as f:
+            for line in f:
+                key, val = line.split(':', 1)
+                meminfo[key.strip()] = int(val.strip().split()[0])
+        total_kb = meminfo.get('MemTotal', 0)
+        avail_kb = meminfo.get('MemAvailable', meminfo.get('MemFree', 0))
+        used_kb  = total_kb - avail_kb
+        stats['mem_total_mb'] = round(total_kb / 1024)
+        stats['mem_used_mb']  = round(used_kb  / 1024)
+        stats['mem_pct']      = round(used_kb / total_kb * 100) if total_kb else 0
+    except Exception:
+        pass
+    try:
+        stats['cpu_count'] = os.cpu_count() or 1
+    except Exception:
+        pass
+    return stats
+
+
+@app.route('/api/system')
+def api_system():
+    """Lightweight endpoint returning CPU load and memory usage."""
+    return jsonify(get_system_stats())
+
 
 @app.route('/api/active-slot')
 def api_active_slot():
