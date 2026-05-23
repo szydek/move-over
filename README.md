@@ -1,4 +1,4 @@
-# Move Over
+# MOVE Over (view)
 
 A "second screen" web dashboard for [Ableton Move](https://www.ableton.com/en/move/) that runs **directly on the device** — accessible from any browser on the same WiFi network, no laptop required after setup.
 
