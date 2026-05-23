@@ -144,4 +144,5 @@ def api_data():
 
 if __name__ == '__main__':
     # Run on port 808 (different from Schwung's 7700)
-    app.run(host='0.0.0.0', port=808, debug=True)
+    # Use reloader only in mock/dev mode — on Move it doubles process count and wastes CPU
+    app.run(host='0.0.0.0', port=808, debug=MOCK, use_reloader=MOCK)
