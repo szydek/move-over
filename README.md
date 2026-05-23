@@ -26,8 +26,8 @@ Built as a proof of concept for integrating Move set management into [Schwung](h
 ### 1. Clone this repo on your Mac
 
 ```bash
-git clone https://github.com/szydek/move-overview-poc.git
-cd move-overview-poc
+git clone https://github.com/szydek/move-over.git
+cd move-over
 ```
 
 ### 2. Copy files to Move
